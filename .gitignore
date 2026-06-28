@@ -1,0 +1,12 @@
+# Data files
+data.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# OS files
+.DS_Store
+Thumbs.db

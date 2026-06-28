@@ -25,7 +25,7 @@ SERIES = {
     "spx":   ("SP500",        21),   # S&P 500           (daily) -> divergence
 }
 
-START = (datetime.date.today() - datetime.timedelta(days=400)).isoformat()
+START = (datetime.date.today() - datetime.timedelta(days=220)).isoformat()
 
 
 def fetch_fred(series_id):
@@ -85,7 +85,7 @@ for key, (sid, win) in SERIES.items():
         last = pts[-1]["v"]
         idx = max(0, len(pts) - 1 - win)
         prev = pts[idx]["v"]
-        out["series"][key] = {"last": last, "prev": prev, "points": pts[-180:]}
+        out["series"][key] = {"last": last, "prev": prev, "points": pts[-60:]}
         ok += 1
     except Exception as e:
         print(f"ERROR {key} ({sid}): {e}", file=sys.stderr)
