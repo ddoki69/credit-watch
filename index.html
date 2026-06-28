@@ -81,7 +81,7 @@
   .hero .hfoot{margin-top:12px;font-size:12px;color:var(--muted);line-height:1.55;border-top:1px solid var(--line);padding-top:11px}
   .hero .hfoot b{color:var(--text);font-weight:600}
   .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
-  .tile{border:1px solid var(--line);border-radius:13px;padding:13px 13px 11px;background:var(--surface);position:relative;min-height:122px;display:flex;flex-direction:column}
+  .tile{border:1px solid var(--line);border-radius:13px;padding:13px 13px 11px;background:var(--surface);position:relative;min-height:182px;display:flex;flex-direction:column}
   .tile .tdot{position:absolute;top:13px;right:13px;width:8px;height:8px;border-radius:50%}
   .tdot[data-c="calm"]{background:var(--calm);box-shadow:0 0 8px rgba(70,192,138,.6)}
   .tdot[data-c="watch"]{background:var(--watch);box-shadow:0 0 8px rgba(231,181,63,.6)}
@@ -95,6 +95,7 @@
   .tile .tunit{font-family:var(--mono);font-size:11px;color:var(--muted)}
   .tile .tchg{font-family:var(--mono);font-size:10px;margin-top:5px}
   .tile .tspark{height:38px;margin-top:6px;opacity:.85}
+  .tile .tdesc{font-size:10px;color:var(--muted);line-height:1.45;margin-top:6px;border-top:1px dashed var(--line);padding-top:6px;letter-spacing:-.01em}
   .range-selector{display:flex;justify-content:flex-end;gap:6px;margin:0 2px 14px}
   .range-btn{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 12px;cursor:pointer;transition:all .15s ease}
   .range-btn:hover{background:var(--surface2);color:var(--text)}
@@ -217,15 +218,15 @@
 
 <script>
 const IND = [
-  {id:'BAMLH0A0HYM2', key:'hy',  name:'HY OAS (하이일드 스프레드)',        unit:'%', thr:[2.6,5.2],  momw:.6, w:30, hero:true, desc:'하이일드 스프레드'},
-  {id:'BAMLC0A0CM',   key:'ig',  name:'IG OAS (투자등급 스프레드)',        unit:'%', thr:[0.7,1.6],  momw:.45,w:11, desc:'투자등급 · 하이퍼스케일러'},
-  {id:'BAMLC0A4CBBB', key:'bbb', name:'BBB OAS (BBB 등급 스프레드)',       unit:'%', thr:[1.0,2.2],  momw:.45,w:8,  desc:'IG/HY 경계 · fallen angel'},
-  {id:'BAMLH0A3HYC',  key:'ccc', name:'CCC OAS (CCC 이하 스프레드)',       unit:'%', thr:[8.0,15.0], momw:.55,w:15, desc:'최저등급 · 가장 민감'},
-  {id:'BAA10Y',       key:'baa', name:'Baa 스프레드 (Baa-10Y 스프레드)',  unit:'%', thr:[1.3,2.6],  momw:.4, w:5,  desc:'Moody’s Baa − 10Y'},
-  {id:'NFCI',         key:'nfci',name:'NFCI (금융여건지수)',          unit:'',  thr:[-0.5,0.4], momw:.4, w:10, desc:'시카고연준 금융여건 · 주간'},
-  {id:'STLFSI4',      key:'stl', name:'StL 스트레스 (금융스트레스지수)',  unit:'',  thr:[-0.8,1.0], momw:.35,w:8,  desc:'세인트루이스연준 · 주간'},
-  {id:'VIXCLS',       key:'vix', name:'VIX (주식 변동성)',           unit:'',  thr:[15,32],    momw:.35,w:5,  desc:'주식 변동성'},
-  {id:'T10Y2Y',       key:'curve',name:'10Y−2Y (장단기 금리차)',       unit:'%', thr:[0.5,-0.3], momw:.2, w:3,  inv:true, desc:'국채 커브 (역전 위험)'},
+  {id:'BAMLH0A0HYM2', key:'hy',  name:'HY OAS (하이일드 스프레드)',        unit:'%', thr:[2.6,5.2],  momw:.6, w:30, hero:true, desc:'하이일드 스프레드', info:'우량 등급 대비 고위험 회사채의 추가 가산금리. 기업 신용 공급 의지의 척도.'},
+  {id:'BAMLC0A0CM',   key:'ig',  name:'IG OAS (투자등급 스프레드)',        unit:'%', thr:[0.7,1.6],  momw:.45,w:11, desc:'투자등급 · 하이퍼스케일러', info:'우량 기업의 조달 금리 스프레드로 빅테크의 신용 환경을 추적합니다.'},
+  {id:'BAMLC0A4CBBB', key:'bbb', name:'BBB OAS (BBB 등급 스프레드)',       unit:'%', thr:[1.0,2.2],  momw:.45,w:8,  desc:'IG/HY 경계 · fallen angel', info:'투자등급 하위 등급의 가산금리. 투기등급 추락에 따른 유동성 위기 징후 감지.'},
+  {id:'BAMLH0A3HYC',  key:'ccc', name:'CCC OAS (CCC 이하 스프레드)',       unit:'%', thr:[8.0,15.0], momw:.55,w:15, desc:'최저등급 · 가장 민감', info:'부도 직전 한계기업 가산금리. 신용 위기 시 가장 먼저 민감하게 폭등하는 선행 지표.'},
+  {id:'BAA10Y',       key:'baa', name:'Baa 스프레드 (Baa-10Y 스프레드)',  unit:'%', thr:[1.3,2.6],  momw:.4, w:5,  desc:'Moody’s Baa − 10Y', info:'전통 우량 회사채(Baa) 금리와 10년 국채 금리의 차이. 실물 경기 위험 척도.'},
+  {id:'NFCI',         key:'nfci',name:'NFCI (금융여건지수)',          unit:'',  thr:[-0.5,0.4], momw:.4, w:10, desc:'시카고연준 금융여건 · 주간', info:'105개 지표 종합 금융 여건 척도. 0 상회 시 금융 긴축 및 하강 리스크 상승.'},
+  {id:'STLFSI4',      key:'stl', name:'StL 스트레스 (금융스트레스지수)',  unit:'',  thr:[-0.8,1.0], momw:.35,w:8,  desc:'세인트루이스연준 · 주간', info:'금융시장 스트레스를 대변. 0(역사적 평균)보다 크게 상승 시 유동성 발작 경보.'},
+  {id:'VIXCLS',       key:'vix', name:'VIX (주식 변동성)',           unit:'',  thr:[15,32],    momw:.35,w:5,  desc:'주식 변동성', info:'S&P 500 옵션 기반 공포지수. 신용 스프레드 확대 이후 주식 폭락 시 동행하여 폭등.'},
+  {id:'T10Y2Y',       key:'curve',name:'10Y−2Y (장단기 금리차)',       unit:'%', thr:[0.5,-0.3], momw:.2, w:3,  inv:true, desc:'국채 커브 (역전 위험)', info:'10년물과 2년물 국채 금리차. 역전(음수) 후 재정상화(양수) 시 경기침체 직전 경보.'},
   {id:'SP500',        key:'spx', name:'S&P 500 (S&P 500 지수)',       unit:'',  hidden:true}
 ];
 // snapshot fallback (2026-06-28): [last, ~1mo prev]
@@ -334,7 +335,7 @@ function render(){
     if(cfg.hidden||cfg.hero)continue;
     const d=DATA[cfg.key],s=indScore(cfg),col=colorFor(s),cl=chgLabel(d);
     const el=document.createElement('div');el.className='tile';
-    el.innerHTML=`<span class="tdot" data-c="${col}"></span><div class="tname">${cfg.name}</div><div class="tid">${cfg.desc}</div><div class="tval"><span class="tnum">${fmt(d?d.last:null,cfg.key)}</span><span class="tunit">${cfg.unit}</span></div><div class="tchg ${cl.c}">${cl.t}</div><svg class="tspark" preserveAspectRatio="none" viewBox="0 0 300 36"></svg>`;
+    el.innerHTML=`<span class="tdot" data-c="${col}"></span><div class="tname">${cfg.name}</div><div class="tid">${cfg.desc}</div><div class="tval"><span class="tnum">${fmt(d?d.last:null,cfg.key)}</span><span class="tunit">${cfg.unit}</span></div><div class="tchg ${cl.c}">${cl.t}</div><svg class="tspark" preserveAspectRatio="none" viewBox="0 0 300 36"></svg><div class="tdesc">${cfg.info || ''}</div>`;
     grid.appendChild(el);
     
     const filteredSeries = d ? filterPointsByRange(d.series, RANGE) : null;
@@ -343,7 +344,7 @@ function render(){
   const mv=document.createElement('div');mv.className='tile';
   const moveVal=LIVE_MOVE!=null?LIVE_MOVE:MOVE_SNAP, moveLive=LIVE_MOVE!=null;
   const mvCol=moveVal<80?'calm':moveVal<130?'watch':moveVal<150?'reduce':'sell';
-  mv.innerHTML=`<span class="tdot" data-c="${mvCol}"></span><div class="tname">MOVE 지수</div><div class="tid">채권 변동성</div><div class="tval"><span class="tnum">${moveVal}</span><span class="tunit"></span></div><div class="tchg chg-fl">${moveLive?'갱신됨 · 탭하여 차트':'스냅샷 · 탭하여 확인'}</div>`;
+  mv.innerHTML=`<span class="tdot" data-c="${mvCol}"></span><div class="tname">MOVE 지수</div><div class="tid">채권 변동성</div><div class="tval"><span class="tnum">${moveVal}</span><span class="tunit"></span></div><div class="tchg chg-fl">${moveLive?'갱신됨 · 탭하여 차트':'스냅샷 · 탭하여 확인'}</div><div class="tdesc">국채 옵션 기반 채권 공포지수. 130 이상 지속 시 채권시장 유동성 발작 경보.</div>`;
   mv.style.cursor='pointer';mv.onclick=()=>window.open('https://www.investing.com/indices/ice-bofaml-move-index','_blank');
   grid.appendChild(mv);
 
