@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 21 * * *'      # 21:00 UTC = 06:00 KST, every day
+    - cron: '47 20 * * *'      # 20:47 UTC = 05:47 KST, every day
   workflow_dispatch:           # allows manual "Run workflow"
 
 permissions:
