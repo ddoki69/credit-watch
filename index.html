@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>CREDIT WATCH · AI Capex 부채 조기경보</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root{
+    --ink:#0d141f;--ink2:#121b29;--surface:#172234;--surface2:#1d2a3e;--line:#26354c;--line2:#324563;
+    --text:#e8edf5;--muted:#8c9bb4;--faint:#5e6e88;
+    --calm:#46c08a;--watch:#e7b53f;--reduce:#e8853c;--sell:#e25862;--cyan:#54b8d6;
+    --calm-bg:rgba(70,192,138,.12);--watch-bg:rgba(231,181,63,.12);--reduce-bg:rgba(232,133,60,.12);--sell-bg:rgba(226,88,98,.13);
+    --kr:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+    --disp:'Space Grotesk',var(--kr);--mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--ink);color:var(--text);font-family:var(--kr);line-height:1.5;
+    padding:max(env(safe-area-inset-top),14px) 0 48px;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(120% 60% at 50% -10%,rgba(84,184,214,.07),transparent 60%);}
+  .wrap{max-width:540px;margin:0 auto;padding:0 16px}
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:6px 2px 18px}
+  .brand{display:flex;flex-direction:column;gap:3px}
+  .brand .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--cyan);text-transform:uppercase}
+  .brand h1{font-family:var(--disp);font-size:21px;font-weight:600;letter-spacing:-.01em;line-height:1.1}
+  .brand .sub{font-size:11.5px;color:var(--faint)}
+  .stamp{text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0}
+  .feed{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:4px 9px;white-space:nowrap}
+  .feed .dot{width:6px;height:6px;border-radius:50%;background:var(--faint)}
+  .feed.live .dot{background:var(--calm);animation:pulse 2.2s infinite}
+  .feed.snap .dot{background:var(--watch)}
+  .feed.err .dot{background:var(--sell)}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(70,192,138,.5)}70%{box-shadow:0 0 0 6px rgba(70,192,138,0)}100%{box-shadow:0 0 0 0 rgba(70,192,138,0)}}
+  .stamp .time{font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .gauge{position:relative;border-radius:20px;padding:24px 22px 22px;margin-bottom:14px;overflow:hidden;border:1px solid var(--line2);background:linear-gradient(170deg,var(--surface2),var(--ink2));}
+  .gauge[data-state="calm"]{box-shadow:inset 0 0 0 1px rgba(70,192,138,.25),0 16px 40px -22px rgba(70,192,138,.5)}
+  .gauge[data-state="watch"]{box-shadow:inset 0 0 0 1px rgba(231,181,63,.25),0 16px 40px -22px rgba(231,181,63,.5)}
+  .gauge[data-state="reduce"]{box-shadow:inset 0 0 0 1px rgba(232,133,60,.28),0 16px 40px -22px rgba(232,133,60,.5)}
+  .gauge[data-state="sell"]{box-shadow:inset 0 0 0 1px rgba(226,88,98,.3),0 16px 40px -22px rgba(226,88,98,.55)}
+  .gauge .glabel{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:14px}
+  .gtop{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:16px}
+  .gphase{display:flex;flex-direction:column;gap:2px}
+  .gphase .ko{font-family:var(--disp);font-size:38px;font-weight:700;line-height:1;letter-spacing:-.02em}
+  .gphase .en{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+  .gscore{text-align:right;flex-shrink:0}
+  .gscore .n{font-family:var(--mono);font-size:34px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+  .gscore .l{font-size:10px;color:var(--faint);font-family:var(--mono);letter-spacing:.1em}
+  .meter{height:8px;border-radius:6px;background:var(--ink);position:relative;overflow:hidden;border:1px solid var(--line)}
+  .meter .fill{position:absolute;left:0;top:0;bottom:0;border-radius:6px;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+  .ticks{display:flex;justify-content:space-between;margin-top:7px;font-family:var(--mono);font-size:9px;color:var(--faint);letter-spacing:.04em}
+  .gnote{margin-top:15px;font-size:13px;color:var(--text);line-height:1.55}
+  .gnote b{font-weight:600}
+  .gdiverge{margin-top:12px;display:none;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:11px;background:var(--sell-bg);border:1px solid rgba(226,88,98,.3);font-size:12px;color:#f3c0c4;line-height:1.5}
+  .gdiverge.on{display:flex}
+  .gdiverge svg{flex-shrink:0;margin-top:1px}
+  .gphase[data-c="calm"] .ko{color:var(--calm)} .gscore[data-c="calm"] .n{color:var(--calm)} .meter .fill[data-c="calm"]{background:linear-gradient(90deg,var(--calm),#5fd09a)}
+  .gphase[data-c="watch"] .ko{color:var(--watch)} .gscore[data-c="watch"] .n{color:var(--watch)} .meter .fill[data-c="watch"]{background:linear-gradient(90deg,var(--watch),#f0c861)}
+  .gphase[data-c="reduce"] .ko{color:var(--reduce)} .gscore[data-c="reduce"] .n{color:var(--reduce)} .meter .fill[data-c="reduce"]{background:linear-gradient(90deg,var(--reduce),#f09a5c)}
+  .gphase[data-c="sell"] .ko{color:var(--sell)} .gscore[data-c="sell"] .n{color:var(--sell)} .meter .fill[data-c="sell"]{background:linear-gradient(90deg,var(--sell),#ec7882)}
+  .seclabel{display:flex;align-items:center;gap:10px;margin:26px 2px 12px}
+  .seclabel .num{font-family:var(--mono);font-size:10px;color:var(--cyan);letter-spacing:.1em}
+  .seclabel h2{font-family:var(--disp);font-size:14px;font-weight:600;letter-spacing:.01em}
+  .seclabel .ln{flex:1;height:1px;background:var(--line)}
+  .hero{border:1px solid var(--line2);border-radius:16px;padding:18px;background:linear-gradient(160deg,var(--surface),var(--ink2))}
+  .hero .htop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px}
+  .hero .hname{font-size:13px;font-weight:600}
+  .hero .hid{font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.06em;margin-top:2px}
+  .hero .hbadge{font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:2px 6px;text-transform:uppercase;white-space:nowrap}
+  .hero .hval{display:flex;align-items:baseline;gap:10px;margin:10px 0 2px}
+  .hero .hnum{font-family:var(--mono);font-size:40px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+  .hero .hunit{font-family:var(--mono);font-size:15px;color:var(--muted)}
+  .hero .hchg{font-family:var(--mono);font-size:12px;font-weight:500;padding:3px 8px;border-radius:6px}
+  .chg-up{color:var(--sell);background:var(--sell-bg)}
+  .chg-dn{color:var(--calm);background:var(--calm-bg)}
+  .chg-fl{color:var(--muted);background:rgba(140,155,180,.1)}
+  .hero .spark{margin:12px -2px 0;height:46px;width:100%}
+  .hero .hfoot{margin-top:12px;font-size:12px;color:var(--muted);line-height:1.55;border-top:1px solid var(--line);padding-top:11px}
+  .hero .hfoot b{color:var(--text);font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+  .tile{border:1px solid var(--line);border-radius:13px;padding:13px 13px 11px;background:var(--surface);position:relative;display:flex;flex-direction:column}
+  .tile .tdot{position:absolute;top:13px;right:13px;width:8px;height:8px;border-radius:50%}
+  .tdot[data-c="calm"]{background:var(--calm);box-shadow:0 0 8px rgba(70,192,138,.6)}
+  .tdot[data-c="watch"]{background:var(--watch);box-shadow:0 0 8px rgba(231,181,63,.6)}
+  .tdot[data-c="reduce"]{background:var(--reduce);box-shadow:0 0 8px rgba(232,133,60,.6)}
+  .tdot[data-c="sell"]{background:var(--sell);box-shadow:0 0 8px rgba(226,88,98,.6)}
+  .tdot[data-c="na"]{background:var(--faint)}
+  .tile .tname{font-size:11.5px;font-weight:600;color:var(--text);padding-right:16px;line-height:1.25}
+  .tile .tkr{font-size:9px;font-weight:400;color:var(--faint);margin-left:4px;letter-spacing:0}
+  .tile .tid{font-family:var(--mono);font-size:8.5px;color:var(--faint);letter-spacing:.04em;margin-top:2px}
+  .tile .tval{margin-top:auto;display:flex;align-items:baseline;gap:6px;padding-top:8px}
+  .tile .tnum{font-family:var(--mono);font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+  .tile .tunit{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .tile .tchg{font-family:var(--mono);font-size:10px;margin-top:5px}
+  .tile .tspark{height:20px;margin-top:6px;opacity:.85}
+  .tile .texplain{font-size:10px;color:var(--faint);margin-top:8px;line-height:1.5;border-top:1px solid var(--line);padding-top:7px;word-break:keep-all}
+  .stage{border:1px solid var(--line);border-radius:14px;margin-bottom:9px;overflow:hidden;background:var(--surface);transition:border-color .3s}
+  .stage.active{border-color:transparent;box-shadow:inset 0 0 0 1.5px currentColor}
+  .stage[data-s="0"]{color:var(--cyan)} .stage[data-s="1"]{color:var(--calm)} .stage[data-s="2"]{color:var(--reduce)} .stage[data-s="3"]{color:var(--sell)}
+  .shead{display:flex;align-items:center;gap:11px;padding:14px 15px;cursor:pointer;user-select:none}
+  .schip{font-family:var(--mono);font-size:11px;font-weight:700;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;border:1px solid currentColor}
+  .stitle{display:flex;flex-direction:column;gap:1px;flex:1}
+  .stitle .st-ko{font-size:13.5px;font-weight:600;color:var(--text)}
+  .stitle .st-en{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .snow{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;padding:3px 7px;border-radius:5px;background:currentColor;display:none}
+  .snow span{color:var(--ink)}
+  .stage.active .snow{display:inline-block}
+  .schevron{color:var(--faint);transition:transform .3s;flex-shrink:0}
+  .stage.open .schevron{transform:rotate(180deg)}
+  .sbody{max-height:0;overflow:hidden;transition:max-height .4s ease}
+  .stage.open .sbody{max-height:520px}
+  .sbody-in{padding:0 15px 15px;font-size:12.5px;color:var(--muted);line-height:1.6}
+  .sbody-in ul{list-style:none;display:flex;flex-direction:column;gap:7px;margin-top:2px}
+  .sbody-in li{display:flex;gap:8px;align-items:flex-start}
+  .sbody-in li::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;margin-top:7px;flex-shrink:0}
+  .sbody-in li b{color:var(--text);font-weight:600}
+  .card{border:1px solid var(--line);border-radius:14px;padding:15px 16px;background:var(--surface);font-size:12.5px;color:var(--muted);line-height:1.62}
+  .card h3{font-size:12px;font-weight:600;color:var(--text);margin-bottom:7px;display:flex;align-items:center;gap:7px}
+  .card h3 .mk{font-family:var(--mono);font-size:10px;color:var(--cyan)}
+  .card p{margin-bottom:8px}
+  .card p:last-child{margin-bottom:0}
+  .card b{color:var(--text);font-weight:600}
+  .card a{color:var(--cyan);text-decoration:none;border-bottom:1px solid rgba(84,184,214,.3)}
+  .actions{display:flex;gap:9px;margin:22px 0 8px}
+  button.refresh{flex:1;font-family:var(--kr);font-size:13px;font-weight:600;color:var(--ink);background:var(--cyan);border:none;border-radius:12px;padding:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s}
+  button.refresh:active{opacity:.8}
+  button.refresh:disabled{opacity:.5;cursor:default}
+  button.refresh svg{transition:transform .6s}
+  button.refresh.spin svg{transform:rotate(360deg)}
+  button.linkbtn{font-family:var(--kr);font-size:12px;font-weight:500;color:var(--text);background:transparent;border:1px solid var(--line2);border-radius:12px;padding:14px 16px;cursor:pointer;white-space:nowrap}
+  .disclaimer{margin-top:18px;font-size:10.5px;color:var(--faint);line-height:1.6;padding:0 2px}
+  .disclaimer b{color:var(--muted)}
+  .hero .spark{margin:12px -2px 0;height:90px;width:100%}
+  .range-btns{display:flex;gap:5px;margin-top:10px;}
+  .rbtn{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;padding:3px 10px;border-radius:6px;border:1px solid var(--line2);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;}
+  .rbtn:hover{border-color:var(--cyan);color:var(--cyan);}
+  .rbtn.active{background:rgba(84,184,214,.15);color:var(--cyan);border-color:var(--cyan);}
+  @media (max-width:360px){.gphase .ko{font-size:32px}.gscore .n{font-size:28px}.hero .hnum{font-size:34px}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <span class="eyebrow">Credit Watch</span>
+      <h1>AI Capex 부채 조기경보</h1>
+      <span class="sub">빅테크에 돈을 대주는 쪽이 손을 떼는 순간을 먼저 잡는다</span>
+    </div>
+    <div class="stamp">
+      <span class="feed" id="feed"><span class="dot"></span><span id="feedtxt">불러오는 중</span></span>
+      <span class="time" id="asof">—</span>
+    </div>
+  </header>
+
+  <div class="gauge" id="gauge" data-state="calm">
+    <div class="glabel">종합 신용 국면 · Composite Credit Phase</div>
+    <div class="gtop">
+      <div class="gphase" id="gphase" data-c="calm"><span class="ko" id="phaseKo">평온</span><span class="en" id="phaseEn">CALM</span></div>
+      <div class="gscore" id="gscore" data-c="calm"><div class="n" id="scoreN">—</div><div class="l">위험 점수 /100</div></div>
+    </div>
+    <div class="meter"><div class="fill" id="meterFill" data-c="calm" style="width:0%"></div></div>
+    <div class="ticks"><span>0 평온</span><span>25 주의</span><span>50 경계</span><span>75 위험</span></div>
+    <div class="gnote" id="gnote">지표를 불러오는 중입니다…</div>
+    <div class="gdiverge" id="gdiverge">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+      <span id="divergeTxt"></span>
+    </div>
+  </div>
+
+  <div class="seclabel"><span class="num">01</span><h2>최우선 선행 신호</h2><span class="ln"></span></div>
+  <div class="hero" id="hero">
+    <div class="htop">
+      <div><div class="hname">하이일드 크레딧 스프레드 (HY OAS)</div><div class="hid">FRED · BAMLH0A0HYM2 · 일간</div></div>
+      <span class="hbadge" id="heroBadge">—</span>
+    </div>
+    <div class="hval"><span class="hnum" id="heroNum">—</span><span class="hunit">%</span><span class="hchg chg-fl" id="heroChg">—</span></div>
+    <svg class="spark" id="heroSpark" preserveAspectRatio="none" viewBox="0 0 300 90"></svg>
+    <div class="range-btns" id="rangeBtns">
+      <button class="rbtn" data-r="1m">1M</button>
+      <button class="rbtn active" data-r="3m">3M</button>
+      <button class="rbtn" data-r="6m">6M</button>
+      <button class="rbtn" data-r="all">ALL</button>
+    </div>
+    <div class="hfoot">1997년 이후 <b>8번의 주요 주가 급락에서 모두</b> 이 스프레드가 저점에서 먼저 벌어진 뒤 주가가 고점을 찍었습니다(선행 1~13개월). 핵심은 절대 수준이 아니라 <b>저점 대비 반전(1개월 +75bp↑)</b> — 특히 주가가 오르는데 스프레드가 벌어지는 괴리입니다.</div>
+  </div>
+
+  <div class="seclabel"><span class="num">02</span><h2>보조 지표 보드</h2><span class="ln"></span></div>
+  <div class="grid" id="grid"></div>
+
+  <div class="seclabel"><span class="num">03</span><h2>단계별 종합 권고</h2><span class="ln"></span></div>
+  <div id="stages"></div>
+
+  <div class="seclabel"><span class="num">04</span><h2>읽는 법 &amp; 한계</h2><span class="ln"></span></div>
+  <div class="card">
+    <h3><span class="mk">▸</span> 종합 점수는 어떻게 계산되나</h3>
+    <p>각 지표를 <b>수준 + 1개월 변화율</b>로 0~100 점수화한 뒤 가중 평균합니다. HY 스프레드와 그 변화율, CCC 스프레드에 가장 큰 비중을 둡니다. 여기에 <b>괴리 감지</b>(스프레드가 벌어지는데 S&amp;P 500은 상승)가 켜지면 점수를 끌어올려 한 단계 위로 보냅니다 — 이것이 당신 가설의 핵심 트리거입니다.</p>
+    <h3 style="margin-top:13px"><span class="mk">▸</span> 데이터 갱신</h3>
+    <p>GitHub Actions가 매일 06:00(KST) FRED에서 받아 갱신합니다. 크레딧 스프레드·금융여건지수·VIX·국채커브·S&amp;P 500은 자동. <b>MOVE</b>는 보조로 시도하며, <b>개별 CDS</b>(Oracle·CoreWeave)는 무료 실시간 소스가 없어 아래 버튼으로 확인하세요.</p>
+    <h3 style="margin-top:13px"><span class="mk">▸</span> 반대 의견도 함께</h3>
+    <p>IMF 수석이코노미스트와 Goldman 주식팀은 Mag-7의 현금창출력이 높고 순레버리지가 낮아(종종 1배 미만) <b>부채 채널이 통제 가능</b>하다고 봅니다. 즉 신용 주도 붕괴가 확정된 시나리오는 아닙니다. 이 보드는 "확신을 주는 도구"가 아니라 "변곡점을 먼저 보는 망원경"입니다.</p>
+  </div>
+
+  <div class="actions">
+    <button class="refresh" id="refreshBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg><span id="refreshTxt">새로고침</span></button>
+    <button class="linkbtn" id="moveBtn">MOVE ↗</button>
+    <button class="linkbtn" id="cdsBtn">CDS 뉴스 ↗</button>
+  </div>
+
+  <div class="disclaimer">
+    <b>데이터:</b> Federal Reserve Bank of St. Louis (FRED) 무료 API · GitHub Actions 일일 갱신. ICE BofA OAS는 2026년 4월부터 3년 롤링 윈도우만 제공. 스냅샷 기준값은 2026-06-28.<br>
+    <b>면책:</b> 본 도구는 정보 제공용이며 투자 자문이 아닙니다. 모든 지표는 후행·거짓신호 가능성이 있고, 종합 점수는 임의의 가중치에 기반한 휴리스틱입니다. 최종 판단과 책임은 이용자 본인에게 있습니다.
+  </div>
+
+</div>
+
+<script>
+const IND = [
+  {id:’BAMLH0A0HYM2’, key:’hy’,  name:’HY OAS’,       kr:’하이일드 스프레드’, unit:’%’, thr:[2.6,5.2],  momw:.6, w:30, hero:true, desc:’하이일드 스프레드’,
+   explain:’정크본드와 국채의 금리 차이. 저점 대비 +75bp 이상 반전 시 핵심 매도 선행신호.’},
+  {id:’BAMLC0A0CM’,   key:’ig’,  name:’IG OAS’,       kr:’투자등급 스프레드’, unit:’%’, thr:[0.7,1.6],  momw:.45,w:11, desc:’투자등급 · 하이퍼스케일러’,
+   explain:’애플·MS 등 빅테크 포함 투자등급 전체 스프레드. 상승하면 대형 채권 발행 비용 증가 신호.’},
+  {id:’BAMLC0A4CBBB’, key:’bbb’, name:’BBB OAS’,      kr:’BBB등급 스프레드’, unit:’%’, thr:[1.0,2.2],  momw:.45,w:8,  desc:’IG/HY 경계 · fallen angel’,
+   explain:’투자등급 최하단. 여기가 벌어지기 시작하면 HY로 강등(Fallen Angel) 위험 선행.’},
+  {id:’BAMLH0A3HYC’,  key:’ccc’, name:’CCC OAS’,      kr:’최저등급 스프레드’, unit:’%’, thr:[8.0,15.0], momw:.55,w:15, desc:’최저등급 · 가장 민감’,
+   explain:’신용등급 최하단. 위기 시 가장 먼저·가장 크게 반응하는 카나리아. HY보다 예민.’},
+  {id:’BAA10Y’,       key:’baa’, name:’Baa 스프레드’, kr:’무디스 Baa’, unit:’%’, thr:[1.3,2.6],  momw:.4, w:5,  desc:’Moody\’s Baa − 10Y’,
+   explain:’Moody\’s Baa 등급과 10년 국채의 차이. 전통적인 기업신용 체감 온도계.’},
+  {id:’NFCI’,         key:’nfci’,name:’NFCI’,          kr:’금융여건지수’, unit:’’,  thr:[-0.5,0.4], momw:.4, w:10, desc:’시카고연준 · 주간’,
+   explain:’시카고 연준 발표. 0=중립, 음수=완화적, 양수=긴축. 0 위로 올라오면 신용 조임 신호.’},
+  {id:’STLFSI4’,      key:’stl’, name:’StL 스트레스’, kr:’금융스트레스지수’, unit:’’,  thr:[-0.8,1.0], momw:.35,w:8,  desc:’세인트루이스연준 · 주간’,
+   explain:’세인트루이스 연준 발표 주간지수. 0 이상이면 평균보다 높은 금융 긴장 상태.’},
+  {id:’VIXCLS’,       key:’vix’, name:’VIX’,           kr:’공포지수’, unit:’’,  thr:[15,32],    momw:.35,w:5,  desc:’주식 변동성’,
+   explain:’S&P 500 30일 내재변동성. 15 이하=안도, 20~25=경계, 32 이상=패닉 구간.’},
+  {id:’T10Y2Y’,       key:’curve’,name:’10Y−2Y’,       kr:’장단기 금리차’, unit:’%’, thr:[0.5,-0.3], momw:.2, w:3,  inv:true, desc:’국채 커브 (역전 위험)’,
+   explain:’양수=정상 우상향, 음수=역전. 역전 후 정상화 구간이 역사적으로 경기침체 선행.’},
+  {id:’SP500’,        key:’spx’, name:’S&P 500’,       unit:’’,  hidden:true}
+];
+// snapshot fallback (2026-06-28): [last, ~1mo prev]
+const SNAP={hy:[2.78,2.84],ig:[0.77,0.79],bbb:[1.01,1.03],ccc:[9.47,9.55],baa:[1.49,1.52],nfci:[-0.52,-0.50],stl:[-0.76,-0.74],vix:[18.1,17.4],curve:[0.50,0.47],spx:[6480,6360]};
+const MOVE_SNAP=69;
+
+const DATA={};
+let MODE='snapshot', LIVE_MOVE=null, GEN=null, RANGE='3m';
+
+function filterByRange(series,range){
+  if(!series||series.length===0)return series;
+  if(range==='all')return series;
+  const days=range==='1m'?30:range==='3m'?90:180;
+  const cut=new Date();cut.setDate(cut.getDate()-days);
+  const f=series.filter(p=>p.d&&new Date(p.d)>=cut);
+  return f.length>=2?f:series;
+}
+
+function heroSparkFull(svgEl,series,color){
+  if(!svgEl||!series||series.length<2){svgEl.innerHTML='';return;}
+  const pts=filterByRange(series,RANGE);
+  if(pts.length<2){svgEl.innerHTML='';return;}
+  const W=300,H=90,pL=6,pR=6,pT=5,pB=22;
+  const vs=pts.map(p=>p.v),mn=Math.min(...vs),mx=Math.max(...vs),rng=(mx-mn)||0.01,n=pts.length;
+  const X=i=>pL+(i/(n-1))*(W-pL-pR);
+  const Y=v=>pT+(1-(v-mn)/rng)*(H-pT-pB);
+  let dp=`M ${X(0).toFixed(1)} ${Y(vs[0]).toFixed(1)}`;
+  for(let i=1;i<n;i++)dp+=` L ${X(i).toFixed(1)} ${Y(vs[i]).toFixed(1)}`;
+  const area=dp+` L ${X(n-1).toFixed(1)} ${H-pB} L ${X(0).toFixed(1)} ${H-pB} Z`;
+  const id='hsp'+Math.random().toString(36).slice(2,6);
+  // x-axis date ticks
+  const numT=Math.min(5,n);let ticks='';
+  for(let t=0;t<numT;t++){
+    const idx=Math.round(t*(n-1)/(numT-1));
+    const p=pts[idx];if(!p||!p.d)continue;
+    const dt=new Date(p.d);
+    const lbl=`${dt.getMonth()+1}/${dt.getDate()}`;
+    const x=X(idx).toFixed(1);
+    ticks+=`<line x1="${x}" y1="${H-pB}" x2="${x}" y2="${H-pB+3}" stroke="${color}" stroke-opacity="0.3" stroke-width="1"/>`;
+    ticks+=`<text x="${x}" y="${H-2}" font-size="8.5" fill="${color}" fill-opacity="0.6" text-anchor="middle" font-family="JetBrains Mono,monospace">${lbl}</text>`;
+  }
+  // y-axis min/max labels
+  const yL=`<text x="${pL+1}" y="${pT+8}" font-size="7.5" fill="${color}" fill-opacity="0.45" font-family="JetBrains Mono,monospace">${mx.toFixed(2)}</text>`+
+           `<text x="${pL+1}" y="${H-pB-3}" font-size="7.5" fill="${color}" fill-opacity="0.45" font-family="JetBrains Mono,monospace">${mn.toFixed(2)}</text>`;
+  // baseline
+  const base=`<line x1="${pL}" y1="${H-pB}" x2="${W-pR}" y2="${H-pB}" stroke="${color}" stroke-opacity="0.15" stroke-width="1"/>`;
+  svgEl.innerHTML=`<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".28"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#${id})"/><path d="${dp}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${X(n-1).toFixed(1)}" cy="${Y(vs[n-1]).toFixed(1)}" r="2.6" fill="${color}"/>${base}${ticks}${yL}`;
+}
+
+function lvlScore(v,thr,inv){let[g,b]=thr,s;if(inv){s=(g-v)/(g-b);}else{s=(v-g)/(b-g);}return Math.max(0,Math.min(1,s))*100;}
+function indScore(cfg){
+  const d=DATA[cfg.key];if(!d||d.last==null)return null;
+  const lvl=lvlScore(d.last,cfg.thr,cfg.inv);let mom=0;
+  if(d.prev!=null&&!cfg.inv){const chg=d.last-d.prev;const den=Math.abs(cfg.thr[1]-cfg.thr[0]);mom=Math.max(0,Math.min(1,chg/(den*0.45)))*100;}
+  const mw=cfg.momw||0;return lvl*(1-mw)+mom*mw;
+}
+function colorFor(s){if(s==null)return'na';if(s<25)return'calm';if(s<50)return'watch';if(s<75)return'reduce';return'sell';}
+function detectDivergence(){
+  const hy=DATA.hy,spx=DATA.spx;if(!hy||!spx||hy.prev==null||spx.prev==null)return null;
+  return (hy.last-hy.prev)>0.10 && (spx.last-spx.prev)/spx.prev>0.005;
+}
+function composite(){
+  let num=0,den=0;
+  for(const cfg of IND){if(cfg.hidden)continue;const s=indScore(cfg);if(s==null)continue;num+=s*cfg.w;den+=cfg.w;}
+  if(!den)return{score:null,div:false};
+  let score=num/den;const div=detectDivergence();
+  if(div)score=Math.max(score,46)+6;
+  return{score:Math.min(100,Math.round(score)),div};
+}
+function spark(svg,series,color,h){
+  if(!svg)return;const W=300,H=h||46,pad=4;
+  if(!series||series.length<2){svg.innerHTML='';return;}
+  const vs=series.map(p=>p.v),mn=Math.min(...vs),mx=Math.max(...vs),rng=(mx-mn)||1,n=series.length;
+  const X=i=>pad+(i/(n-1))*(W-2*pad),Y=v=>pad+(1-(v-mn)/rng)*(H-2*pad);
+  let dp=`M ${X(0).toFixed(1)} ${Y(vs[0]).toFixed(1)}`;
+  for(let i=1;i<n;i++)dp+=` L ${X(i).toFixed(1)} ${Y(vs[i]).toFixed(1)}`;
+  const area=dp+` L ${X(n-1).toFixed(1)} ${H} L ${X(0).toFixed(1)} ${H} Z`,id='g'+Math.random().toString(36).slice(2,7);
+  svg.innerHTML=`<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".28"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#${id})"/><path d="${dp}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${X(n-1).toFixed(1)}" cy="${Y(vs[n-1]).toFixed(1)}" r="2.6" fill="${color}"/>`;
+}
+function fmt(v,key){if(v==null)return'—';if(key==='spx')return Math.round(v).toLocaleString();if(key==='vix')return v.toFixed(1);if(Math.abs(v)>=10)return v.toFixed(1);return v.toFixed(2);}
+function chgLabel(d){
+  if(!d||d.prev==null)return{t:'—',c:'chg-fl'};
+  const diff=d.last-d.prev;let unit='',mult=1;
+  if(['hy','ig','bbb','ccc','baa','curve'].includes(d.key)){unit='bp';mult=100;}
+  const val=diff*mult,sign=val>0?'+':'';
+  const txt=`${sign}${unit?Math.round(val):val.toFixed(1)}${unit} (1M)`;
+  const cls=Math.abs(val)<(unit?3:0.3)?'chg-fl':(diff>0?'chg-up':'chg-dn');
+  return{t:txt,c:cls};
+}
+const CVAR={calm:'#46c08a',watch:'#e7b53f',reduce:'#e8853c',sell:'#e25862',na:'#5e6e88',cyan:'#54b8d6'};
+
+function render(){
+  const hy=DATA.hy;
+  document.getElementById('heroNum').textContent=fmt(hy?hy.last:null,'hy');
+  const hc=chgLabel(hy),heroChg=document.getElementById('heroChg');
+  heroChg.textContent=hc.t;heroChg.className='hchg '+hc.c;
+  const hyScore=indScore(IND[0]),hyCol=colorFor(hyScore);
+  document.getElementById('heroBadge').textContent=hy?({calm:'견조',watch:'주의',reduce:'경계',sell:'위험'}[hyCol]||'—'):'—';
+  heroSparkFull(document.getElementById('heroSpark'),hy?hy.series:null,CVAR[hyCol]||CVAR.cyan);
+
+  const grid=document.getElementById('grid');grid.innerHTML='';
+  for(const cfg of IND){
+    if(cfg.hidden||cfg.hero)continue;
+    const d=DATA[cfg.key],s=indScore(cfg),col=colorFor(s),cl=chgLabel(d);
+    const el=document.createElement('div');el.className='tile';
+    const krTag=cfg.kr?`<span class="tkr">· ${cfg.kr}</span>`:'';
+    el.innerHTML=`<span class="tdot" data-c="${col}"></span><div class="tname">${cfg.name}${krTag}</div><div class="tid">${cfg.desc}</div><div class="tval"><span class="tnum">${fmt(d?d.last:null,cfg.key)}</span><span class="tunit">${cfg.unit}</span></div><div class="tchg ${cl.c}">${cl.t}</div><svg class="tspark" preserveAspectRatio="none" viewBox="0 0 300 20"></svg>${cfg.explain?`<div class="texplain">${cfg.explain}</div>`:''}`;
+    grid.appendChild(el);
+    spark(el.querySelector('.tspark'),d?d.series:null,CVAR[col]||CVAR.na,20);
+  }
+  const mv=document.createElement('div');mv.className='tile';
+  const moveVal=LIVE_MOVE!=null?LIVE_MOVE:MOVE_SNAP, moveLive=LIVE_MOVE!=null;
+  const mvCol=moveVal<80?'calm':moveVal<130?'watch':moveVal<150?'reduce':'sell';
+  mv.innerHTML=`<span class="tdot" data-c="${mvCol}"></span><div class="tname">MOVE 지수<span class="tkr">· 채권 변동성</span></div><div class="tid">ICE BofAML</div><div class="tval"><span class="tnum">${moveVal}</span><span class="tunit"></span></div><div class="tchg chg-fl">${moveLive?'갱신됨 · 탭하여 차트':'스냅샷 · 탭하여 확인'}</div><div class="texplain">채권시장 내재변동성(VIX의 채권판). 80 미만=안정, 130 이상=신용경색 경보.</div>`;
+  mv.style.cursor='pointer';mv.onclick=()=>window.open('https://www.investing.com/indices/ice-bofaml-move-index','_blank');
+  grid.appendChild(mv);
+
+  const{score,div}=composite(),col=colorFor(score);
+  const KO={calm:'평온',watch:'주의',reduce:'경계',sell:'위험',na:'대기'},EN={calm:'CALM',watch:'WATCH',reduce:'REDUCE',sell:'SELL',na:'STANDBY'};
+  const NOTE={
+    calm:'신용 공급 의지가 견조합니다. 종합 스프레드가 타이트하고 금융여건은 완화적 — <b>보유 유지</b> 구간. 다이버전스만 계측하세요.',
+    watch:'초기 변화가 감지됩니다. 일부 지표가 저점에서 반전 중 — <b>다이버전스를 면밀히 추적</b>하고 신규 위험 노출을 줄이세요.',
+    reduce:'공급 의지가 약해지고 있습니다. 여러 지표가 동시에 악화 — <b>비중 축소를 검토</b>할 구간입니다.',
+    sell:'신용과 주식의 괴리가 확대되었습니다. 역사적으로 주가 고점에 선행 — <b>선제적 매도</b>를 고려할 구간입니다.',
+    na:'데이터 대기 중입니다.'
+  };
+  document.getElementById('gauge').dataset.state=col;
+  const gp=document.getElementById('gphase');gp.dataset.c=col;
+  document.getElementById('phaseKo').textContent=KO[col];
+  document.getElementById('phaseEn').textContent=EN[col];
+  const gs=document.getElementById('gscore');gs.dataset.c=col;
+  document.getElementById('scoreN').textContent=score==null?'—':score;
+  const mf=document.getElementById('meterFill');mf.dataset.c=col;mf.style.width=(score==null?0:score)+'%';
+  document.getElementById('gnote').innerHTML=NOTE[col];
+  const dv=document.getElementById('gdiverge');
+  if(div){dv.classList.add('on');document.getElementById('divergeTxt').innerHTML='<b>괴리 감지:</b> HY 스프레드가 벌어지는데 S&P 500은 상승 중 — 당신 가설의 핵심 트리거가 켜졌습니다.';}
+  else dv.classList.remove('on');
+
+  const stageIdx=score==null?-1:(score<25?1:score<50?2:3);
+  document.querySelectorAll('.stage').forEach(s=>s.classList.toggle('active',parseInt(s.dataset.s)===stageIdx));
+}
+
+const STAGES=[
+  {s:0,ko:'구축 / 상시 모니터',en:'Build · Always-on',items:['<b>일간</b> 자동 수집: HY·IG·BBB·CCC OAS, Baa 스프레드, VIX, 국채커브, S&P 500','<b>주간:</b> NFCI·StL 스트레스지수 / <b>분기:</b> SLOOS C&I 긴축 비율','<b>수동:</b> MOVE 지수, Oracle·CoreWeave CDS, 하이퍼스케일러·SPV 신규 발행 뉴스','핵심은 매일 <b>스프레드 대 AI 주식의 괴리</b>를 눈으로 확인하는 습관']},
+  {s:1,ko:'관찰 — 보유 유지',en:'Watch · Hold',items:['종합 스프레드 타이트, NFCI·StL 음수, MOVE·VIX 낮음 = 현 상태','투자 유지하되 <b>괴리 오버레이</b>(스프레드 vs Nasdaq/반도체)를 계측','단일 종목 스트레스(Oracle·CoreWeave CDS)가 인덱스로 번지는지 감시']},
+  {s:2,ko:'축소 — 비중 줄이기',en:'Reduce',items:['아래 중 <b>2개 이상</b> 충족 시 발동','Nasdaq 상승 중 HY OAS가 저점 대비 <b>+75~100bp</b> 확대','10Y 금리 하락하는데 CCC OAS 확대 (1996년 검증 패턴)','NFCI가 0 상회 · SLOOS C&I 순긴축 급등 · BDC 할인 25~30% 돌파','하이퍼스케일러/SPV 채권 거래 철회 또는 스프레드 급확대 · MOVE 130 지속']},
+  {s:3,ko:'매도 — 변곡점 선제 대응',en:'Sell ahead',items:['주가 횡보/상승하는데 HY·IG OAS가 <b>4주 이상 연속</b> 확대 = 고전적 신용-선행-주식 괴리','개별 AI CDS(Oracle·CoreWeave)가 직전 고점 돌파 + IG 인덱스로 전이','레버리지론 가격 하락 + CLO 발행 정체','이 구성은 역사적으로 주가 고점에 <b>1~13개월 선행</b> — 확인 전에 행동']}
+];
+function buildStages(){
+  const wrap=document.getElementById('stages');
+  STAGES.forEach(st=>{
+    const el=document.createElement('div');el.className='stage';el.dataset.s=st.s;
+    el.innerHTML=`<div class="shead"><span class="schip">${st.s}</span><div class="stitle"><span class="st-ko">${st.ko}</span><span class="st-en">${st.en}</span></div><span class="snow"><span>NOW</span></span><svg class="schevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div><div class="sbody"><div class="sbody-in"><ul>${st.items.map(i=>`<li>${i}</li>`).join('')}</ul></div></div>`;
+    el.querySelector('.shead').onclick=()=>el.classList.toggle('open');
+    wrap.appendChild(el);
+  });
+}
+
+function applySnapshot(){
+  MODE='snapshot';
+  for(const cfg of IND){const s=SNAP[cfg.key];if(!s)continue;DATA[cfg.key]={key:cfg.key,last:s[0],prev:s[1],series:[{d:'',v:s[1]},{d:'',v:s[0]}],src:'snap'};}
+}
+async function loadData(){
+  try{
+    const r=await fetch('./data.json?_='+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw new Error('no data.json');
+    const j=await r.json();let ok=0;
+    for(const cfg of IND){
+      const s=j.series&&j.series[cfg.key];if(!s)continue;
+      DATA[cfg.key]={key:cfg.key,last:s.last,prev:s.prev,series:(s.points||[]).map(p=>({d:p.d,v:p.v})),src:'live'};ok++;
+    }
+    if(j.move!=null)LIVE_MOVE=j.move;
+    GEN=j.generated||null;
+    return ok;
+  }catch(e){return 0;}
+}
+function setFeed(st){const f=document.getElementById('feed'),t=document.getElementById('feedtxt');f.className='feed '+(st==='live'?'live':st==='snap'?'snap':'err');t.textContent=st==='live'?'실시간 · FRED':st==='snap'?'스냅샷':'오프라인';}
+function setStamp(){
+  let base=(MODE==='live'&&GEN)?new Date(GEN):new Date();
+  const fmtd=base.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('asof').textContent=(MODE==='live'?'갱신 ':'기준 ')+fmtd;
+}
+async function refresh(){
+  const btn=document.getElementById('refreshBtn'),txt=document.getElementById('refreshTxt');
+  btn.disabled=true;btn.classList.add('spin');txt.textContent='불러오는 중';
+  document.getElementById('feedtxt').textContent='불러오는 중';
+  const ok=await loadData();
+  if(ok>=5){MODE='live';setFeed('live');}else{applySnapshot();MODE='snapshot';setFeed('snap');}
+  setStamp();render();
+  btn.disabled=false;btn.classList.remove('spin');txt.textContent='새로고침';
+}
+
+applySnapshot();buildStages();render();setFeed('snap');setStamp();
+document.getElementById('refreshBtn').onclick=refresh;
+document.getElementById('moveBtn').onclick=()=>window.open('https://www.investing.com/indices/ice-bofaml-move-index','_blank');
+document.getElementById('cdsBtn').onclick=()=>window.open('https://www.google.com/search?q=Oracle+CoreWeave+CDS+credit+default+swap','_blank');
+document.getElementById('rangeBtns').addEventListener('click',e=>{
+  const btn=e.target.closest('.rbtn');if(!btn)return;
+  RANGE=btn.dataset.r;
+  document.querySelectorAll('.rbtn').forEach(b=>b.classList.toggle('active',b===btn));
+  const hy=DATA.hy,hyScore=indScore(IND[0]),hyCol=colorFor(hyScore);
+  heroSparkFull(document.getElementById('heroSpark'),hy?hy.series:null,CVAR[hyCol]||CVAR.cyan);
+});
+refresh();
+</script>
+</body>
+</html>
+>N[col];
+  const gs=document.getElementById('gscore');gs.dataset.c=col;
+  document.getElementById('scoreN').textContent=score==null?'—':score;
+  const mf=document.getElementById('meterFill');mf.dataset.c=col;mf.style.width=(score==null?0:score)+'%';
+  document.getElementById('gnote').innerHTML=NOTE[col];
+  const dv=document.getElementById('gdiverge');
+  if(div){dv.classList.add('on');document.getElementById('divergeTxt').innerHTML='<b>괴리 감지:</b> HY 스프레드가 벌어지는데 S&P 500은 상승 중 — 당신 가설의 핵심 트리거가 켜졌습니다.';}
+  else dv.classList.remove('on');
+
+  const stageIdx=score==null?-1:(score<25?1:score<50?2:3);
+  document.querySelectorAll('.stage').forEach(s=>s.classList.toggle('active',parseInt(s.dataset.s)===stageIdx));
+}
+
+const STAGES=[
+  {s:0,ko:'구축 / 상시 모니터',en:'Build · Always-on',items:['<b>일간</b> 자동 수집: HY·IG·BBB·CCC OAS, Baa 스프레드, VIX, 국채커브, S&P 500','<b>주간:</b> NFCI·StL 스트레스지수 / <b>분기:</b> SLOOS C&I 긴축 비율','<b>수동:</b> MOVE 지수, Oracle·CoreWeave CDS, 하이퍼스케일러·SPV 신규 발행 뉴스','핵심은 매일 <b>스프레드 대 AI 주식의 괴리</b>를 눈으로 확인하는 습관']},
+  {s:1,ko:'관찰 — 보유 유지',en:'Watch · Hold',items:['종합 스프레드 타이트, NFCI·StL 음수, MOVE·VIX 낮음 = 현 상태','투자 유지하되 <b>괴리 오버레이</b>(스프레드 vs Nasdaq/반도체)를 계측','단일 종목 스트레스(Oracle·CoreWeave CDS)가 인덱스로 번지는지 감시']},
+  {s:2,ko:'축소 — 비중 줄이기',en:'Reduce',items:['아래 중 <b>2개 이상</b> 충족 시 발동','Nasdaq 상승 중 HY OAS가 저점 대비 <b>+75~100bp</b> 확대','10Y 금리 하락하는데 CCC OAS 확대 (1996년 검증 패턴)','NFCI가 0 상회 · SLOOS C&I 순긴축 급등 · BDC 할인 25~30% 돌파','하이퍼스케일러/SPV 채권 거래 철회 또는 스프레드 급확대 · MOVE 130 지속']},
+  {s:3,ko:'매도 — 변곡점 선제 대응',en:'Sell ahead',items:['주가 횡보/상승하는데 HY·IG OAS가 <b>4주 이상 연속</b> 확대 = 고전적 신용-선행-주식 괴리','개별 AI CDS(Oracle·CoreWeave)가 직전 고점 돌파 + IG 인덱스로 전이','레버리지론 가격 하락 + CLO 발행 정체','이 구성은 역사적으로 주가 고점에 <b>1~13개월 선행</b> — 확인 전에 행동']}
+];
+function buildStages(){
+  const wrap=document.getElementById('stages');
+  STAGES.forEach(st=>{
+    const el=document.createElement('div');el.className='stage';el.dataset.s=st.s;
+    el.innerHTML=`<div class="shead"><span class="schip">${st.s}</span><div class="stitle"><span class="st-ko">${st.ko}</span><span class="st-en">${st.en}</span></div><span class="snow"><span>NOW</span></span><svg class="schevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div><div class="sbody"><div class="sbody-in"><ul>${st.items.map(i=>`<li>${i}</li>`).join('')}</ul></div></div>`;
+    el.querySelector('.shead').onclick=()=>el.classList.toggle('open');
+    wrap.appendChild(el);
+  });
+}
+
+function applySnapshot(){
+  MODE='snapshot';
+  for(const cfg of IND){const s=SNAP[cfg.key];if(!s)continue;DATA[cfg.key]={key:cfg.key,last:s[0],prev:s[1],series:[{d:'',v:s[1]},{d:'',v:s[0]}],src:'snap'};}
+}
+async function loadData(){
+  try{
+    const r=await fetch('./data.json?_='+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw new Error('no data.json');
+    const j=await r.json();let ok=0;
+    for(const cfg of IND){
+      const s=j.series&&j.series[cfg.key];if(!s)continue;
+      DATA[cfg.key]={key:cfg.key,last:s.last,prev:s.prev,series:(s.points||[]).map(p=>({d:p.d,v:p.v})),src:'live'};ok++;
+    }
+    if(j.move!=null)LIVE_MOVE=j.move;
+    GEN=j.generated||null;
+    return ok;
+  }catch(e){return 0;}
+}
+function setFeed(st){const f=document.getElementById('feed'),t=document.getElementById('feedtxt');f.className='feed '+(st==='live'?'live':st==='snap'?'snap':'err');t.textContent=st==='live'?'실시간 · FRED':st==='snap'?'스냅샷':'오프라인';}
+function setStamp(){
+  let base = (MODE==='live'&&GEN)?new Date(GEN):new Date();
+  const fmtd=base.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('asof').textContent=(MODE==='live'?'갱신 ':'기준 ')+fmtd;
+}
+async function refresh(){
+  const btn=document.getElementById('refreshBtn'),txt=document.getElementById('refreshTxt');
+  btn.disabled=true;btn.classList.add('spin');txt.textContent='불러오는 중';
+  document.getElementById('feedtxt').textContent='불러오는 중';
+  const ok=await loadData();
+  if(ok>=5){MODE='live';setFeed('live');}else{applySnapshot();MODE='snapshot';setFeed('snap');}
+  setStamp();render();
+  btn.disabled=false;btn.classList.remove('spin');txt.textContent='새로고침';
+}
+
+applySnapshot();buildStages();render();setFeed('snap');setStamp();
+document.getElementById('refreshBtn').onclick=refresh;
+document.getElementById('moveBtn').onclick=()=>window.open('https://www.investing.com/indices/ice-bofaml-move-index','_blank');
+document.getElementById('cdsBtn').onclick=()=>window.open('https://www.google.com/search?q=Oracle+CoreWeave+CDS+credit+default+swap','_blank');
+document.getElementById('rangeBtns').addEventListener('click',e=>{
+  const btn=e.target.closest('.rbtn');if(!btn)return;
+  RANGE=btn.dataset.r;
+  document.querySelectorAll('.rbtn').forEach(b=>b.classList.toggle('active',b===btn));
+  const hy=DATA.hy,hyScore=indScore(IND[0]),hyCol=colorFor(hyScore);
+  heroSparkFull(document.getElementById('heroSpark'),hy?hy.series:null,CVAR[hyCol]||CVAR.cyan);
+});
+refresh();
+</script>
+</body>
+</html>
