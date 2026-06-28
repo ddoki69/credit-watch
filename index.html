@@ -77,11 +77,11 @@
   .chg-up{color:var(--sell);background:var(--sell-bg)}
   .chg-dn{color:var(--calm);background:var(--calm-bg)}
   .chg-fl{color:var(--muted);background:rgba(140,155,180,.1)}
-  .hero .spark{margin:12px -2px 0;height:46px;width:100%}
+  .hero .spark{margin:12px -2px 0;height:62px;width:100%}
   .hero .hfoot{margin-top:12px;font-size:12px;color:var(--muted);line-height:1.55;border-top:1px solid var(--line);padding-top:11px}
   .hero .hfoot b{color:var(--text);font-weight:600}
   .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
-  .tile{border:1px solid var(--line);border-radius:13px;padding:13px 13px 11px;background:var(--surface);position:relative;min-height:104px;display:flex;flex-direction:column}
+  .tile{border:1px solid var(--line);border-radius:13px;padding:13px 13px 11px;background:var(--surface);position:relative;min-height:122px;display:flex;flex-direction:column}
   .tile .tdot{position:absolute;top:13px;right:13px;width:8px;height:8px;border-radius:50%}
   .tdot[data-c="calm"]{background:var(--calm);box-shadow:0 0 8px rgba(70,192,138,.6)}
   .tdot[data-c="watch"]{background:var(--watch);box-shadow:0 0 8px rgba(231,181,63,.6)}
@@ -94,7 +94,11 @@
   .tile .tnum{font-family:var(--mono);font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
   .tile .tunit{font-family:var(--mono);font-size:11px;color:var(--muted)}
   .tile .tchg{font-family:var(--mono);font-size:10px;margin-top:5px}
-  .tile .tspark{height:20px;margin-top:6px;opacity:.85}
+  .tile .tspark{height:38px;margin-top:6px;opacity:.85}
+  .range-selector{display:flex;justify-content:flex-end;gap:6px;margin:0 2px 14px}
+  .range-btn{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 12px;cursor:pointer;transition:all .15s ease}
+  .range-btn:hover{background:var(--surface2);color:var(--text)}
+  .range-btn.active{color:var(--ink);background:var(--cyan);border-color:var(--cyan)}
   .stage{border:1px solid var(--line);border-radius:14px;margin-bottom:9px;overflow:hidden;background:var(--surface);transition:border-color .3s}
   .stage.active{border-color:transparent;box-shadow:inset 0 0 0 1.5px currentColor}
   .stage[data-s="0"]{color:var(--cyan)} .stage[data-s="1"]{color:var(--calm)} .stage[data-s="2"]{color:var(--reduce)} .stage[data-s="3"]{color:var(--sell)}
@@ -149,6 +153,12 @@
       <span class="time" id="asof">—</span>
     </div>
   </header>
+
+  <div class="range-selector">
+    <button class="range-btn active" data-r="3m">3M</button>
+    <button class="range-btn" data-r="6m">6M</button>
+    <button class="range-btn" data-r="5y">5Y</button>
+  </div>
 
   <div class="gauge" id="gauge" data-state="calm">
     <div class="glabel">종합 신용 국면 · Composite Credit Phase</div>
@@ -207,23 +217,42 @@
 
 <script>
 const IND = [
-  {id:'BAMLH0A0HYM2', key:'hy',  name:'HY OAS',        unit:'%', thr:[2.6,5.2],  momw:.6, w:30, hero:true, desc:'하이일드 스프레드'},
-  {id:'BAMLC0A0CM',   key:'ig',  name:'IG OAS',        unit:'%', thr:[0.7,1.6],  momw:.45,w:11, desc:'투자등급 · 하이퍼스케일러'},
-  {id:'BAMLC0A4CBBB', key:'bbb', name:'BBB OAS',       unit:'%', thr:[1.0,2.2],  momw:.45,w:8,  desc:'IG/HY 경계 · fallen angel'},
-  {id:'BAMLH0A3HYC',  key:'ccc', name:'CCC OAS',       unit:'%', thr:[8.0,15.0], momw:.55,w:15, desc:'최저등급 · 가장 민감'},
-  {id:'BAA10Y',       key:'baa', name:'Baa 스프레드',  unit:'%', thr:[1.3,2.6],  momw:.4, w:5,  desc:'Moody’s Baa − 10Y'},
-  {id:'NFCI',         key:'nfci',name:'NFCI',          unit:'',  thr:[-0.5,0.4], momw:.4, w:10, desc:'시카고연준 금융여건 · 주간'},
-  {id:'STLFSI4',      key:'stl', name:'StL 스트레스',  unit:'',  thr:[-0.8,1.0], momw:.35,w:8,  desc:'세인트루이스연준 · 주간'},
-  {id:'VIXCLS',       key:'vix', name:'VIX',           unit:'',  thr:[15,32],    momw:.35,w:5,  desc:'주식 변동성'},
-  {id:'T10Y2Y',       key:'curve',name:'10Y−2Y',       unit:'%', thr:[0.5,-0.3], momw:.2, w:3,  inv:true, desc:'국채 커브 (역전 위험)'},
-  {id:'SP500',        key:'spx', name:'S&P 500',       unit:'',  hidden:true}
+  {id:'BAMLH0A0HYM2', key:'hy',  name:'HY OAS (하이일드 스프레드)',        unit:'%', thr:[2.6,5.2],  momw:.6, w:30, hero:true, desc:'하이일드 스프레드'},
+  {id:'BAMLC0A0CM',   key:'ig',  name:'IG OAS (투자등급 스프레드)',        unit:'%', thr:[0.7,1.6],  momw:.45,w:11, desc:'투자등급 · 하이퍼스케일러'},
+  {id:'BAMLC0A4CBBB', key:'bbb', name:'BBB OAS (BBB 등급 스프레드)',       unit:'%', thr:[1.0,2.2],  momw:.45,w:8,  desc:'IG/HY 경계 · fallen angel'},
+  {id:'BAMLH0A3HYC',  key:'ccc', name:'CCC OAS (CCC 이하 스프레드)',       unit:'%', thr:[8.0,15.0], momw:.55,w:15, desc:'최저등급 · 가장 민감'},
+  {id:'BAA10Y',       key:'baa', name:'Baa 스프레드 (Baa-10Y 스프레드)',  unit:'%', thr:[1.3,2.6],  momw:.4, w:5,  desc:'Moody’s Baa − 10Y'},
+  {id:'NFCI',         key:'nfci',name:'NFCI (금융여건지수)',          unit:'',  thr:[-0.5,0.4], momw:.4, w:10, desc:'시카고연준 금융여건 · 주간'},
+  {id:'STLFSI4',      key:'stl', name:'StL 스트레스 (금융스트레스지수)',  unit:'',  thr:[-0.8,1.0], momw:.35,w:8,  desc:'세인트루이스연준 · 주간'},
+  {id:'VIXCLS',       key:'vix', name:'VIX (주식 변동성)',           unit:'',  thr:[15,32],    momw:.35,w:5,  desc:'주식 변동성'},
+  {id:'T10Y2Y',       key:'curve',name:'10Y−2Y (장단기 금리차)',       unit:'%', thr:[0.5,-0.3], momw:.2, w:3,  inv:true, desc:'국채 커브 (역전 위험)'},
+  {id:'SP500',        key:'spx', name:'S&P 500 (S&P 500 지수)',       unit:'',  hidden:true}
 ];
 // snapshot fallback (2026-06-28): [last, ~1mo prev]
 const SNAP={hy:[2.78,2.84],ig:[0.77,0.79],bbb:[1.01,1.03],ccc:[9.47,9.55],baa:[1.49,1.52],nfci:[-0.52,-0.50],stl:[-0.76,-0.74],vix:[18.1,17.4],curve:[0.50,0.47],spx:[6480,6360]};
 const MOVE_SNAP=69;
 
 const DATA={};
-let MODE='snapshot', LIVE_MOVE=null, GEN=null;
+let MODE='snapshot', LIVE_MOVE=null, GEN=null, RANGE='3m';
+
+function filterPointsByRange(points, range) {
+  if (!points || points.length === 0) return [];
+  const lastPoint = points[points.length - 1];
+  if (!lastPoint.d) return points; // 스냅샷 대비 예외 처리 (d가 없는 경우)
+  
+  const lastDate = new Date(lastPoint.d);
+  let cutoffDate = new Date(lastPoint.d);
+  
+  if (range === '3m') {
+    cutoffDate.setMonth(cutoffDate.getMonth() - 3);
+  } else if (range === '6m') {
+    cutoffDate.setMonth(cutoffDate.getMonth() - 6);
+  } else if (range === '5y') {
+    cutoffDate.setFullYear(cutoffDate.getFullYear() - 5);
+  }
+  
+  return points.filter(p => new Date(p.d) >= cutoffDate);
+}
 
 function lvlScore(v,thr,inv){let[g,b]=thr,s;if(inv){s=(g-v)/(g-b);}else{s=(v-g)/(b-g);}return Math.max(0,Math.min(1,s))*100;}
 function indScore(cfg){
@@ -246,14 +275,36 @@ function composite(){
   return{score:Math.min(100,Math.round(score)),div};
 }
 function spark(svg,series,color,h){
-  if(!svg)return;const W=300,H=h||46,pad=4;
+  if(!svg)return;
+  const W=300, H=h||46, textH=12, pad=4;
+  const chartH = H - textH;
   if(!series||series.length<2){svg.innerHTML='';return;}
   const vs=series.map(p=>p.v),mn=Math.min(...vs),mx=Math.max(...vs),rng=(mx-mn)||1,n=series.length;
-  const X=i=>pad+(i/(n-1))*(W-2*pad),Y=v=>pad+(1-(v-mn)/rng)*(H-2*pad);
+  const X=i=>pad+(i/(n-1))*(W-2*pad),Y=v=>pad+(1-(v-mn)/rng)*(chartH-2*pad);
   let dp=`M ${X(0).toFixed(1)} ${Y(vs[0]).toFixed(1)}`;
   for(let i=1;i<n;i++)dp+=` L ${X(i).toFixed(1)} ${Y(vs[i]).toFixed(1)}`;
-  const area=dp+` L ${X(n-1).toFixed(1)} ${H} L ${X(0).toFixed(1)} ${H} Z`,id='g'+Math.random().toString(36).slice(2,7);
-  svg.innerHTML=`<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".28"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#${id})"/><path d="${dp}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${X(n-1).toFixed(1)}" cy="${Y(vs[n-1]).toFixed(1)}" r="2.6" fill="${color}"/>`;
+  const area=dp+` L ${X(n-1).toFixed(1)} ${chartH} L ${X(0).toFixed(1)} ${chartH} Z`,id='g'+Math.random().toString(36).slice(2,7);
+  
+  // 날짜 파싱 (YY-MM-DD 형식으로 간결하게 표시)
+  const formatD = (dStr) => {
+    if (!dStr) return '';
+    const parts = dStr.split('-');
+    if (parts.length === 3) return `${parts[0].slice(2)}-${parts[1]}-${parts[2]}`;
+    return dStr;
+  };
+  
+  const startD = formatD(series[0].d);
+  const endD = formatD(series[n-1].d);
+  
+  let dateTexts = '';
+  if (startD && endD) {
+    dateTexts = `
+      <text x="${pad}" y="${H - 2}" font-family="var(--mono)" font-size="8" fill="var(--faint)" text-anchor="start">${startD}</text>
+      <text x="${W - pad}" y="${H - 2}" font-family="var(--mono)" font-size="8" fill="var(--faint)" text-anchor="end">${endD}</text>
+    `;
+  }
+  
+  svg.innerHTML=`<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".28"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#${id})"/><path d="${dp}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${X(n-1).toFixed(1)}" cy="${Y(vs[n-1]).toFixed(1)}" r="2.6" fill="${color}"/><line x1="0" y1="${chartH}" x2="${W}" y2="${chartH}" stroke="var(--line)" stroke-width="0.8" stroke-dasharray="2,2"/>${dateTexts}`;
 }
 function fmt(v,key){if(v==null)return'—';if(key==='spx')return Math.round(v).toLocaleString();if(key==='vix')return v.toFixed(1);if(Math.abs(v)>=10)return v.toFixed(1);return v.toFixed(2);}
 function chgLabel(d){
@@ -274,16 +325,20 @@ function render(){
   heroChg.textContent=hc.t;heroChg.className='hchg '+hc.c;
   const hyScore=indScore(IND[0]),hyCol=colorFor(hyScore);
   document.getElementById('heroBadge').textContent=hy?({calm:'견조',watch:'주의',reduce:'경계',sell:'위험'}[hyCol]||'—'):'—';
-  spark(document.getElementById('heroSpark'),hy?hy.series:null,CVAR[hyCol]||CVAR.cyan,46);
+  
+  const filteredHySeries = hy ? filterPointsByRange(hy.series, RANGE) : null;
+  spark(document.getElementById('heroSpark'),filteredHySeries,CVAR[hyCol]||CVAR.cyan,60);
 
   const grid=document.getElementById('grid');grid.innerHTML='';
   for(const cfg of IND){
     if(cfg.hidden||cfg.hero)continue;
     const d=DATA[cfg.key],s=indScore(cfg),col=colorFor(s),cl=chgLabel(d);
     const el=document.createElement('div');el.className='tile';
-    el.innerHTML=`<span class="tdot" data-c="${col}"></span><div class="tname">${cfg.name}</div><div class="tid">${cfg.desc}</div><div class="tval"><span class="tnum">${fmt(d?d.last:null,cfg.key)}</span><span class="tunit">${cfg.unit}</span></div><div class="tchg ${cl.c}">${cl.t}</div><svg class="tspark" preserveAspectRatio="none" viewBox="0 0 300 20"></svg>`;
+    el.innerHTML=`<span class="tdot" data-c="${col}"></span><div class="tname">${cfg.name}</div><div class="tid">${cfg.desc}</div><div class="tval"><span class="tnum">${fmt(d?d.last:null,cfg.key)}</span><span class="tunit">${cfg.unit}</span></div><div class="tchg ${cl.c}">${cl.t}</div><svg class="tspark" preserveAspectRatio="none" viewBox="0 0 300 36"></svg>`;
     grid.appendChild(el);
-    spark(el.querySelector('.tspark'),d?d.series:null,CVAR[col]||CVAR.na,20);
+    
+    const filteredSeries = d ? filterPointsByRange(d.series, RANGE) : null;
+    spark(el.querySelector('.tspark'),filteredSeries,CVAR[col]||CVAR.na,36);
   }
   const mv=document.createElement('div');mv.className='tile';
   const moveVal=LIVE_MOVE!=null?LIVE_MOVE:MOVE_SNAP, moveLive=LIVE_MOVE!=null;
@@ -335,7 +390,18 @@ function buildStages(){
 
 function applySnapshot(){
   MODE='snapshot';
-  for(const cfg of IND){const s=SNAP[cfg.key];if(!s)continue;DATA[cfg.key]={key:cfg.key,last:s[0],prev:s[1],series:[{d:'',v:s[1]},{d:'',v:s[0]}],src:'snap'};}
+  // 스냅샷 날짜를 기준일(2026-06-28)과 1개월 전(2026-05-28)으로 부여해 날짜 표시 지원
+  for(const cfg of IND){
+    const s=SNAP[cfg.key];
+    if(!s)continue;
+    DATA[cfg.key]={
+      key:cfg.key,
+      last:s[0],
+      prev:s[1],
+      series:[{d:'2026-05-28',v:s[1]},{d:'2026-06-28',v:s[0]}],
+      src:'snap'
+    };
+  }
 }
 async function loadData(){
   try{
@@ -366,6 +432,16 @@ async function refresh(){
   setStamp();render();
   btn.disabled=false;btn.classList.remove('spin');txt.textContent='새로고침';
 }
+
+// 범위 토글 버튼 클릭 리스너 설정
+document.querySelectorAll('.range-btn').forEach(btn => {
+  btn.onclick = (e) => {
+    document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    RANGE = e.target.dataset.r;
+    render();
+  };
+});
 
 applySnapshot();buildStages();render();setFeed('snap');setStamp();
 document.getElementById('refreshBtn').onclick=refresh;

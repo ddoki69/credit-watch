@@ -25,7 +25,7 @@ SERIES = {
     "spx":   ("SP500",        21),   # S&P 500           (daily) -> divergence
 }
 
-START = (datetime.date.today() - datetime.timedelta(days=220)).isoformat()
+START = (datetime.date.today() - datetime.timedelta(days=5 * 365 + 30)).isoformat()
 
 
 def fetch_fred(series_id):
@@ -56,7 +56,7 @@ def fetch_move():
     """MOVE bond-vol index via Yahoo (unofficial). Optional; fails gracefully."""
     try:
         url = ("https://query1.finance.yahoo.com/v8/finance/chart/"
-               "%5EMOVE?range=3mo&interval=1d")
+               "%5EMOVE?range=5y&interval=1d")
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=20) as r:
             d = json.load(r)
@@ -85,7 +85,7 @@ for key, (sid, win) in SERIES.items():
         last = pts[-1]["v"]
         idx = max(0, len(pts) - 1 - win)
         prev = pts[idx]["v"]
-        out["series"][key] = {"last": last, "prev": prev, "points": pts[-60:]}
+        out["series"][key] = {"last": last, "prev": prev, "points": pts}
         ok += 1
     except Exception as e:
         print(f"ERROR {key} ({sid}): {e}", file=sys.stderr)
