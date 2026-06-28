@@ -1,6 +1,9 @@
 name: Update Credit Watch
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '0 21 * * *'      # 21:00 UTC = 06:00 KST, every day
   workflow_dispatch:           # allows manual "Run workflow"
