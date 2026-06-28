@@ -35,6 +35,7 @@ def fetch_fred(series_id):
         "file_type": "json",
         "observation_start": START,
         "sort_order": "asc",
+        "limit": 10000,
     })
     url = f"https://api.stlouisfed.org/fred/series/observations?{q}"
     req = urllib.request.Request(url, headers={"User-Agent": "credit-watch/1.0"})
